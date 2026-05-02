@@ -96,7 +96,7 @@ Or drag it into any browser.
 
 ## 📸 Preview
 
-![Top Sum Gameplay](assets/top-sum-demo.gif)
+![Top Sum Gameplay](top-sum-demo.gif)
 
 ---
 
