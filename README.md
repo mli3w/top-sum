@@ -6,9 +6,9 @@
 
 ---
 
-## 🎮 Try it
+## 🎮 Play Now
+👉 https://mli3w.github.io/top-sum/
 
-👉 **Play instantly in your browser:** *(add your link here)*
 No install. No setup. Works on desktop & mobile.
 
 ---
@@ -95,6 +95,9 @@ Or drag it into any browser.
 ---
 
 ## 📸 Preview
+
+## 🎮 Try it
+👉 https://mli3w.github.io/top-sum/
 
 ![Top Sum Gameplay](top-sum-demo.gif)
 
