@@ -12,11 +12,6 @@ No install · No signup · Desktop + Mobile
 
 ![Top Sum Gameplay](top-sum-demo.gif)
 
-<p align="center">
-  <img src="top-sum-demo%20(0).gif" width="48%" alt="Top Sum — gameplay clip 1">
-  &nbsp;
-  <img src="top-sum-demo%20(1).gif" width="48%" alt="Top Sum — gameplay clip 2">
-</p>
 
 ---
 
@@ -34,7 +29,7 @@ Instead of worksheets or flashcards, players pilot a plane through Marina Bay an
 Chain correct answers together to:
 - build streaks
 - increase speed
-- swap up to a faster plane
+- unlock faster and more advanced planes
 - trigger cinematic slow-motion moments
 - unlock new flight experiences
 
@@ -59,7 +54,7 @@ and more:
 
 This started as a small project for my sister-in-law's son over a long weekend.
 
-At the same time, I was exploring how AI can help prototype interactive ideas faster — especially small custom learning experiences for kids.
+At the same time, I was exploring how AI can help prototype interactive ideas faster — especially small interactive learning experiences for kids.
 
 I also made a simplified Tiny Mode for my 4-year-old.
 
