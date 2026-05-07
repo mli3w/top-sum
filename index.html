@@ -959,6 +959,8 @@
     backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
     z-index: 220; display: none;
     align-items: center; justify-content: center;
+    /* #hud is pointer-events: none — opt back in so the Try / Later buttons receive clicks. */
+    pointer-events: auto;
   }
   #unlock-celebration.show { display: flex; }
   .unlock-card {
