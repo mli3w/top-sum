@@ -1,8 +1,61 @@
 <!DOCTYPE html>
 <!--
   ============================================================
-  TOP SUM · Math Flight (v11)
+  TOP SUM · Math Flight (v12)
   ------------------------------------------------------------
+  v12 changes:
+    FIXES:
+    · Pause overlay buttons (Resume / Restart / End Flight /
+      Back to Menu) now clickable on desktop. The overlay sat
+      inside #hud (pointer-events: none) without re-enabling
+      pointer events on itself.
+
+    LOGO REDESIGN:
+    · Title logo rebuilt around a single centered swept-forward
+      delta wing pair in chrome (was flanking feathered gold
+      wings). Wings form an inverse triangle that frames the
+      type, with the V tip dropping near the · in the subtitle.
+    · TOP SUM now side-by-side same-sized italic gold metallic
+      (was stacked, with SUM in blue).
+    · Star insignia (★) added above the type.
+    · Brighter, more inviting gold gradient + warm amber halo
+      under the type (replaces a dark vignette).
+    · Cinematic warm radial bloom behind the whole logo.
+
+    TITLE INTRO + AMBIENT MOTION:
+    · One-shot intro sequence on title load (~1.6s total):
+      wings sweep outward, TOP SUM settles, star drops with a
+      subtle overshoot, subtitle rises last.
+    · Ambient loops: slow breathing gold pulse on the type;
+      star twinkle + gentle vertical float.
+    · @media (prefers-reduced-motion: reduce) disables all of
+      the above.
+    · Subtitle: letter-spacing tightened ~14%, colour brightened,
+      opacity 0.95 → 1.
+
+    SUNSET UNLOCK CELEBRATION (1000 pts):
+    · Full-screen sun-flare wash that blooms in then fades.
+    · Slow-rotating golden sun-rays behind the card.
+    · Pulsing halo ring behind the 🌅 icon.
+    · ~46 falling golden sparkle particles spawned in two bursts.
+    · New body.sunset-pending state glows the in-game ☀ time
+      icon AND the title-screen 🌅 Sunset radio until the player
+      actually engages sunset (then auto-clears). Returning users
+      who already had sunset selected are silently marked used.
+
+    AMBIENT WORLD (DAY ONLY):
+    · NDP-style RSAF fighter formation flypast: 5 jets in arrow
+      formation streak across the bay every ~35–65s with fading
+      white contrails. Day-only ambience like the chinook.
+
+    SHARING / META:
+    · README.md and LICENSE (MIT) added to the repo.
+    · OG / Twitter card meta tags now use absolute URLs anchored
+      to https://mli3w.github.io/top-sum/ and a working og:image
+      (was relative paths to a non-existent share-card.png).
+    · shareScore() always shares the canonical play URL — never
+      a local file:// path or query-string variant.
+
   v11 changes:
     PATH (TBC-1 v2):
     · Flight path re-routed with three new cinematic moments:
@@ -69,19 +122,21 @@
 <title>Top Sum · Math Flight Over Marina Bay</title>
 <meta name="description" content="A friendly math game for kids. Fly through the right answer over Marina Bay, Singapore. Built for ages 4 and up. Made for my kids.">
 
-<!-- Open Graph (LinkedIn, Facebook, WhatsApp, etc.) -->
+<!-- Open Graph (LinkedIn, Facebook, WhatsApp, iMessage, etc.) -->
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://mli3w.github.io/top-sum/">
 <meta property="og:title" content="Top Sum · Math Flight Over Marina Bay">
 <meta property="og:description" content="A friendly math game for kids. Fly through the right answer over Marina Bay. Made for my kids.">
-<meta property="og:image" content="share-card.png">
+<meta property="og:image" content="https://mli3w.github.io/top-sum/top-sum-demo.gif">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:url" content="https://mli3w.github.io/top-sum/">
 <meta name="twitter:title" content="Top Sum · Math Flight Over Marina Bay">
 <meta name="twitter:description" content="A friendly math game for kids. Fly through the right answer.">
-<meta name="twitter:image" content="share-card.png">
+<meta name="twitter:image" content="https://mli3w.github.io/top-sum/top-sum-demo.gif">
 
 <!-- Inline SVG favicon -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231a0e2e'/%3E%3Cpath d='M50 22 L62 45 L86 50 L62 55 L50 78 L38 55 L14 50 L38 45 Z' fill='%23ffd24d' stroke='%2300ddee' stroke-width='2'/%3E%3C/svg%3E">
@@ -3992,7 +4047,8 @@
   // === SHARE SCORE ===
   function shareScore() {
     Sound.click();
-    const url = location.href.split('?')[0].split('#')[0];
+    // Always share the canonical play URL — never a local file:// path or query-string variant.
+    const url = 'https://mli3w.github.io/top-sum/';
     // Short text for the native share sheet (which appends the url itself)
     const shortText = `I've scored ${game.score} on Top Sum 🛩️ — math flight over Marina Bay. Streak ×${game.bestStreak}, ${game.totalCorrect} correct. Try it:`;
     // Combined text for clipboard fallback (must include the url so people can click through)
