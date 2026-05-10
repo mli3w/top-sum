@@ -1,8 +1,99 @@
 <!DOCTYPE html>
 <!--
   ============================================================
-  TOP SUM · Math Flight (v12)
+  TOP SUM · Math Flight (v13)
   ------------------------------------------------------------
+  v13 changes:
+    ZOOOM (NEW HEADLINE FEATURE):
+    · A pill-shaped ZOOOM bar appears top-center during play.
+      Each correct answer fills it (1/threshold per answer).
+      Per-difficulty thresholds — Tiny: 5, Easy: 7, Medium/Hard: 10.
+      The word ZOOOM is rendered inside the bar and gets covered
+      as the fill grows; at 100% the word re-emerges glowing
+      white over the gold fill and the bar pulses, signalling
+      it's tappable.
+    · Tap (or press Z) to fire a 3/4-of-circuit cinematic lap:
+      math layer suspended, base speed × 2.2, gates removed.
+      Tap mid-question and it goes "ZOOOM ARMED" — auto-fires
+      after the player resolves the current answer.
+    · Activation: G-force camera shake, big italic gold "ZOOOM"
+      word flies across the screen, 3-note rising sting (C5/E5/B5)
+      plus low-frequency sawtooth engine swell, camera FOV
+      lerps from 72° to 92° for warp feel.
+    · During the lap: two F-16 escort jets fade in from the rear
+      and lock onto the player's flanks (±10m laterally, 3m back).
+      They bank with the player's input, tracking real-time. Each
+      wingmate emits an additive-blend Points-based vapor trail
+      (80 samples, white-to-transparent gradient). Spinning radial
+      speed-streaks overlay (warp-tunnel mask) on top of a bright
+      edge-vignette gradient. Fireworks force-fired every
+      0.28–0.50s at random bay sites (bypasses sunset gating).
+    · Last 15% of lap = peel-off: wingmates climb up-and-outward
+      while rolling away from the player, trails arcing behind.
+    · Lap ends at 0.75 of path traversal — fresh question after a
+      0.6s breath. Bar resets; charge again.
+
+    SPEED MODE (NEW OPT-IN):
+    · Title-screen checkbox "⚡ Speed Mode (50% faster)" multiplies
+      base × flow speed by 1.5 for any difficulty. Persists to
+      localStorage as topsum_speedmode.
+    · Stacks with Flow multiplier and ZOOOM. Hard + Flow ×4 +
+      Speed Mode + ZOOOM ≈ 3.3× normal speed during the lap.
+    · ⚡ icon in the in-game icon column on touch AND desktop
+      (other icons stay touch-only). Gold-glow pulse when active.
+    · Keyboard shortcut: S. Live-updates speed if toggled
+      mid-flight. Toast confirms ON / OFF.
+
+    LOGO + TITLE SCREEN POLISH:
+    · Logo redesigned around a single centered swept-forward delta
+      wing pair in chrome (was flanking feathered gold wings).
+      Wings form an inverse-triangle that frames TOP SUM, V tip
+      drops near the · in the subtitle.
+    · TOP SUM now side-by-side same-sized italic gold metallic
+      (was stacked, with SUM in blue).
+    · Star insignia (★) added above the type, with twinkle + float.
+    · Cinematic warm radial bloom backdrop behind the whole logo.
+    · Intro sequence (~1.6s, one-shot on first render): wings sweep
+      outward, TOP SUM settles, star drops with a subtle overshoot,
+      subtitle rises last.
+    · Ambient loops: slow breathing gold pulse on the type;
+      star twinkle (2.6s) + gentle vertical float (3.8s).
+    · Subtitle letter-spacing tightened ~14%, colour brightened,
+      opacity 0.95 → 1.
+    · @media (prefers-reduced-motion: reduce) disables all of the
+      title animations + ZOOOM bar pulse + speed-icon pulse +
+      streaks rotation + word flash.
+
+    AMBIENT WORLD (DAY ONLY):
+    · NDP-style RSAF fighter formation flypast: 5 jets in arrow
+      formation streak across the bay every 35–65s with fading
+      white contrails. Day-only ambience, like the Chinook.
+
+    SUNSET BUMPS:
+    · Firework palette doubled — original red/white/gold/blue/pink
+      plus green/cyan/orange/purple/lime (10 colours total).
+    · Auto-launch interval tightened from 6–8s to 4–5.5s for
+      a slightly denser sky.
+
+    KEYBOARD HINT SURFACED ON TITLE SCREEN:
+    · Desktop title hint now lists all six shortcuts:
+      C auto-center · M sound · T time · S speed · Z ZOOOM · ESC pause.
+
+    SHARING / META:
+    · README.md, LICENSE (MIT), and CHANGELOG.md added to the repo.
+    · OG / Twitter card meta tags now use absolute URLs anchored to
+      https://mli3w.github.io/top-sum/ with a working og:image
+      (234KB PNG screenshot — was a 15MB GIF that exceeded the 5MB
+      cap on LinkedIn / Slack / WhatsApp).
+    · shareScore() always shares the canonical play URL, never a
+      local file:// path.
+
+    FIXES:
+    · Sunset Mode unlock celebration "Try it now / Maybe later"
+      buttons were unclickable on desktop. Same root cause as the
+      v12 pause overlay fix — overlay nested inside #hud
+      (pointer-events: none) without re-enabling pointer events.
+
   v12 changes:
     FIXES:
     · Pause overlay buttons (Resume / Restart / End Flight /
@@ -249,6 +340,95 @@
     white-space: nowrap;
   }
 
+  /* === v13: ZOOOM BAR ===
+     Charges by 1 per correct answer; threshold varies by difficulty.
+     States: empty (text dim, no fill) → filling (fill covers text from left)
+     → full (text re-emerges glowing on top of fill, bar pulses, tap enabled). */
+  #zoom-bar {
+    position: absolute;
+    top: calc(20px + var(--safe-top));
+    left: 50%;
+    transform: translateX(-50%);
+    width: clamp(180px, 36vw, 300px);
+    height: clamp(28px, 5vh, 38px);
+    border-radius: 999px;
+    background: rgba(8, 16, 28, 0.7);
+    border: 1px solid rgba(0, 220, 255, 0.35);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    overflow: hidden;
+    z-index: 8;
+    pointer-events: none;
+    cursor: pointer;
+    user-select: none; -webkit-user-select: none;
+    display: none;
+    --charge: 0;
+  }
+  #zoom-bar.show { display: block; }
+  #zoom-bar .zoom-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: calc(var(--charge) * 100%);
+    background: linear-gradient(90deg,
+      rgba(0, 200, 255, 0.55) 0%,
+      rgba(120, 220, 255, 0.85) 35%,
+      rgba(255, 220, 100, 0.95) 75%,
+      rgba(255, 240, 200, 1) 100%);
+    box-shadow: 0 0 12px rgba(150, 220, 255, 0.5);
+    transition: width 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
+    z-index: 1;
+  }
+  #zoom-bar .zoom-text {
+    position: relative;
+    z-index: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-family: 'Arial Black', 'Helvetica Neue', sans-serif;
+    font-style: italic;
+    font-weight: 900;
+    font-size: clamp(13px, 2.6vw, 18px);
+    letter-spacing: clamp(2px, 0.8vw, 5px);
+    color: rgba(170, 200, 220, 0.6);
+    text-transform: uppercase;
+    pointer-events: none;
+    transition: color 0.3s, text-shadow 0.3s;
+  }
+  /* Full state: ready to tap. Text moves above fill, glows; bar pulses. */
+  #zoom-bar.full {
+    pointer-events: auto;
+    border-color: rgba(255, 240, 200, 0.85);
+    animation: zoomReadyPulse 1.6s ease-in-out infinite;
+  }
+  #zoom-bar.full .zoom-text {
+    z-index: 2;
+    color: #ffffff;
+    text-shadow:
+      0 0 8px rgba(255, 240, 200, 0.95),
+      0 0 18px rgba(255, 220, 100, 0.75);
+  }
+  @keyframes zoomReadyPulse {
+    0%, 100% {
+      transform: translateX(-50%) scale(1);
+      box-shadow: 0 0 18px rgba(255, 220, 100, 0.7),
+                  0 4px 16px rgba(0, 0, 0, 0.4),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+    50% {
+      transform: translateX(-50%) scale(1.05);
+      box-shadow: 0 0 30px rgba(255, 220, 100, 1),
+                  0 4px 20px rgba(0, 0, 0, 0.5),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    }
+  }
+  /* Hide while ZOOOM is actively running */
+  #zoom-bar.zooming { display: none; }
+  @media (prefers-reduced-motion: reduce) {
+    #zoom-bar.full { animation: none; }
+  }
+
   /* === STATS === */
   #stats {
     position: absolute; top: calc(16px + var(--safe-top)); right: calc(14px + var(--safe-right));
@@ -291,7 +471,7 @@
     display: none;
     position: absolute; top: 50%; left: calc(10px + var(--safe-left));
     transform: translateY(-50%);
-    flex-direction: column; gap: 10px;
+    flex-direction: column; gap: 8px;
     pointer-events: auto;
   }
   body.is-touch #icon-settings { display: flex; }
@@ -307,6 +487,23 @@
   }
   .icon-btn.off { color: #ff9999; opacity: 0.6; }
   .icon-btn:active { background: rgba(0, 220, 255, 0.18); }
+  /* v13: Speed Mode icon — gold glow when active. */
+  #btn-speed.on {
+    color: #fff4c4;
+    border-color: rgba(255, 220, 100, 0.85);
+    background: rgba(255, 200, 80, 0.18);
+    box-shadow: 0 0 14px rgba(255, 220, 100, 0.55),
+                0 4px 12px rgba(0, 0, 0, 0.4);
+    animation: speedIconPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes speedIconPulse {
+    0%, 100% { transform: scale(1);    filter: brightness(1); }
+    50%      { transform: scale(1.05); filter: brightness(1.18); }
+  }
+  /* v13: Speed icon needs no extra rules — the existing
+     "body:not(.is-touch) #icon-settings { display: flex; }" further down
+     already surfaces the whole icon column on desktop, so btn-speed is
+     visible alongside the other icons on every platform. */
 
   #controls {
     position: absolute; bottom: calc(14px + var(--safe-bottom));
@@ -383,6 +580,106 @@
     mix-blend-mode: screen;
   }
   #slowmo-overlay.show { opacity: 1; }
+
+  /* === v13: ZOOOM SPEED STREAKS ===
+     Radial rays spinning out from screen center + bright edge vignette,
+     for a warp-tunnel sensation during the cinematic lap. */
+  #zoom-streaks {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 7;
+    transition: opacity 0.4s ease;
+    mix-blend-mode: screen;
+    overflow: hidden;
+  }
+  #zoom-streaks.show { opacity: 1; }
+  #zoom-streaks .streak-rays {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 220vmax; height: 220vmax;
+    transform: translate(-50%, -50%);
+    background:
+      repeating-conic-gradient(from 0deg at 50% 50%,
+        transparent 0deg,
+        transparent 3deg,
+        rgba(180, 220, 255, 0.18) 3.4deg,
+        rgba(255, 255, 255, 0.32) 4deg,
+        rgba(180, 220, 255, 0.18) 4.6deg,
+        transparent 5deg,
+        transparent 8deg);
+    -webkit-mask: radial-gradient(ellipse at center,
+      transparent 0%, transparent 28%,
+      rgba(0, 0, 0, 0.9) 65%, #000 100%);
+            mask: radial-gradient(ellipse at center,
+      transparent 0%, transparent 28%,
+      rgba(0, 0, 0, 0.9) 65%, #000 100%);
+    animation: streakSpin 7s linear infinite,
+               streakPulse 0.55s ease-in-out infinite alternate;
+    transform-origin: center;
+    will-change: transform, opacity;
+  }
+  #zoom-streaks::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center,
+      transparent 30%,
+      rgba(120, 200, 255, 0.10) 62%,
+      rgba(180, 220, 255, 0.32) 90%,
+      rgba(220, 240, 255, 0.50) 100%);
+    pointer-events: none;
+  }
+  @keyframes streakSpin {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to   { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+  @keyframes streakPulse {
+    from { opacity: 0.78; filter: brightness(1); }
+    to   { opacity: 1;    filter: brightness(1.25); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #zoom-streaks .streak-rays { animation: none; }
+  }
+
+  /* === v13: BIG ZOOOM TEXT FLASH ===
+     Massive italic word flies in from the left, sits briefly at center,
+     then swoops out to the right. Triggered once at ZOOOM activation. */
+  #zoom-flash {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+    z-index: 9;
+    overflow: hidden;
+  }
+  #zoom-flash span {
+    font-family: 'Arial Black', 'Helvetica Neue', sans-serif;
+    font-style: italic;
+    font-weight: 900;
+    font-size: clamp(80px, 22vw, 260px);
+    letter-spacing: clamp(4px, 1.2vw, 12px);
+    text-transform: uppercase;
+    color: #fffaea;
+    text-shadow:
+      0 0 22px rgba(255, 230, 140, 0.95),
+      0 0 60px rgba(255, 200, 80, 0.65),
+      0 8px 0 rgba(0, 0, 0, 0.45);
+    -webkit-text-stroke: 2.5px rgba(80, 50, 0, 0.7);
+    white-space: nowrap;
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+  #zoom-flash.fire span {
+    animation: zoomFlashFire 0.95s cubic-bezier(0.18, 0.82, 0.30, 1) forwards;
+  }
+  @keyframes zoomFlashFire {
+    0%   { opacity: 0; transform: translateX(-110vw) skewX(-15deg) scale(0.5); }
+    25%  { opacity: 1; transform: translateX(0)      skewX(-15deg) scale(1.22); }
+    55%  { opacity: 1; transform: translateX(0)      skewX(-15deg) scale(1); }
+    100% { opacity: 0; transform: translateX(120vw)  skewX(-15deg) scale(1.4); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #zoom-flash.fire span { animation: none; opacity: 1; transform: skewX(-15deg); }
+  }
 
   #joystick {
     position: absolute; bottom: calc(36px + var(--safe-bottom));
@@ -1220,6 +1517,13 @@
   <div id="hit-flash"></div>
   <div id="correct-flash"></div>
   <div id="slowmo-overlay"></div>
+  <div id="zoom-streaks"><div class="streak-rays"></div></div>
+  <div id="zoom-flash" aria-hidden="true"><span>ZOOOM</span></div>
+
+  <div id="zoom-bar" role="button" tabindex="0" aria-label="ZOOOM boost">
+    <div class="zoom-fill"></div>
+    <div class="zoom-text">ZOOOM</div>
+  </div>
 
   <div id="question-bar"><div id="q-text">Loading…</div></div>
 
@@ -1235,6 +1539,8 @@
     <span class="key">C</span>: auto-center <span id="ic-center" class="state">ON</span><br>
     <span class="key">M</span>: sound <span id="ic-sound" class="state">ON</span><br>
     <span class="key">T</span>: time <span id="ic-time" class="state">DAY</span><br>
+    <span class="key">S</span>: speed <span id="ic-speed" class="state off">OFF</span><br>
+    <span class="key">Z</span>: ZOOOM<br>
     <span class="key">ESC</span>: menu
   </div>
 
@@ -1242,6 +1548,7 @@
     <button class="icon-btn" id="btn-sound"    title="Toggle sound">🔊</button>
     <button class="icon-btn" id="btn-center"   title="Toggle auto-center">⊕</button>
     <button class="icon-btn" id="btn-time"     title="Toggle day / sunset">☀</button>
+    <button class="icon-btn" id="btn-speed"    title="Toggle Speed Mode (50% faster)">⚡</button>
     <button class="icon-btn" id="btn-controls" title="Switch controls">🕹</button>
     <button class="icon-btn" id="btn-pause"    title="Pause">⏸</button>
   </div>
@@ -1335,6 +1642,7 @@
       </div>
       <label><input type="checkbox" id="cb-autocenter"> Auto-center</label>
       <label><input type="checkbox" id="cb-sound"> Sound</label>
+      <label class="speed-opt"><input type="checkbox" id="cb-speedmode"> ⚡ Speed Mode <small>(50% faster)</small></label>
       <div id="control-picker">
         <span class="picker-label">Controls:</span>
         <label><input type="radio" name="control" value="joystick"> 🕹 Joystick</label>
@@ -1345,7 +1653,7 @@
     <div class="hint">
       <span class="desktop-only">
         ARROW KEYS or WASD to steer · 5 streak = FLOW ×2 · 10 = ×3 · stay in flow!<br>
-        press <b>C</b> auto-center · <b>M</b> sound · <b>T</b> time of day
+        <b>C</b> auto-center · <b>M</b> sound · <b>T</b> time · <b>S</b> speed mode · <b>Z</b> ZOOOM · <b>ESC</b> pause
       </span>
       <span class="touch-only">
         STEER with the joystick or D-pad · 5 streak = FLOW ×2 · 10 = ×3<br>
@@ -1437,6 +1745,7 @@
     sound: true,
     control: isTouch ? 'dpad' : 'joystick',
     timeOfDay: 'day',
+    speedMode: false,   // v13: 50% faster base speed for fast players
     load() {
       let savedControl = null;
       try {
@@ -1444,11 +1753,13 @@
         const sn = localStorage.getItem('topsum_sound');
         const ct = localStorage.getItem('topsum_control');
         const td = localStorage.getItem('topsum_time');
+        const sp = localStorage.getItem('topsum_speedmode');
         const mobileMig = localStorage.getItem('topsum_mobile_dpad_mig');
         if (ac !== null) this.autoCenter = ac === '1';
         if (sn !== null) this.sound = sn === '1';
         if (ct === 'joystick' || ct === 'dpad') { this.control = ct; savedControl = ct; }
         if (td === 'day' || td === 'sunset') this.timeOfDay = td;
+        if (sp !== null) this.speedMode = sp === '1';
         // One-time migration: any older default of 'joystick' on a touch
         // device gets switched over to 'dpad' the first time we boot up
         // with this build. After this runs once, the user's explicit choice
@@ -1464,6 +1775,8 @@
       if (!savedControl && isTouch) this.control = 'dpad';
       document.getElementById('cb-autocenter').checked = this.autoCenter;
       document.getElementById('cb-sound').checked = this.sound;
+      const cbSpeed = document.getElementById('cb-speedmode');
+      if (cbSpeed) cbSpeed.checked = this.speedMode;
       document.querySelectorAll('input[name=control]').forEach(r => r.checked = (r.value === this.control));
       document.querySelectorAll('input[name=timeofday]').forEach(r => r.checked = (r.value === this.timeOfDay));
       this.updateBadges();
@@ -1476,6 +1789,7 @@
         localStorage.setItem('topsum_sound', this.sound ? '1' : '0');
         localStorage.setItem('topsum_control', this.control);
         localStorage.setItem('topsum_time', this.timeOfDay);
+        localStorage.setItem('topsum_speedmode', this.speedMode ? '1' : '0');
       } catch (e) {}
     },
     applyControl() {
@@ -1495,19 +1809,26 @@
       const c = document.getElementById('ic-center');
       const s = document.getElementById('ic-sound');
       const ti = document.getElementById('ic-time');
+      const sp = document.getElementById('ic-speed');
       c.textContent = this.autoCenter ? 'ON' : 'OFF';
       c.className = 'state' + (this.autoCenter ? '' : ' off');
       s.textContent = this.sound ? 'ON' : 'OFF';
       s.className = 'state' + (this.sound ? '' : ' off');
       ti.textContent = this.timeOfDay === 'sunset' ? 'SUNSET' : 'DAY';
       ti.className = 'state';
+      if (sp) {
+        sp.textContent = this.speedMode ? 'ON' : 'OFF';
+        sp.className = 'state' + (this.speedMode ? '' : ' off');
+      }
       const bs = document.getElementById('btn-sound');
       const bc = document.getElementById('btn-center');
       const bt = document.getElementById('btn-time');
+      const bsp = document.getElementById('btn-speed');
       bs.textContent = this.sound ? '🔊' : '🔇';
       bs.classList.toggle('off', !this.sound);
       bc.classList.toggle('off', !this.autoCenter);
       bt.textContent = this.timeOfDay === 'sunset' ? '🌅' : '☀';
+      if (bsp) bsp.classList.toggle('on', this.speedMode);
     }
   };
 
@@ -1578,6 +1899,13 @@
   });
   document.getElementById('cb-sound').addEventListener('change', e => {
     Settings.sound = e.target.checked; Settings.save(); Settings.updateBadges();
+  });
+  document.getElementById('cb-speedmode').addEventListener('change', e => {
+    Settings.speedMode = e.target.checked;
+    Settings.save();
+    Settings.updateBadges();   // paints the in-game icon + hint badge
+    if (typeof updateFlow === 'function') updateFlow();
+    showToast(Settings.speedMode ? '⚡ SPEED MODE ON' : '⚡ SPEED MODE OFF');
   });
   document.querySelectorAll('input[name=control]').forEach(r => {
     r.addEventListener('change', e => {
@@ -2927,10 +3255,20 @@
     flowMult: 1, bestScore: 0,
     slowmo: 0, slowmoMax: 0.9,
     shake: 0, shakeIntensity: 0,
-    paused: false   // true while crash-confirm modal is open
+    paused: false,  // true while crash-confirm modal is open
+    // v13: ZOOOM
+    zoomCharge: 0,           // 0..1 normalized fill level
+    zoomActive: false,       // true during the cinematic lap
+    zoomStartPathT: 0,       // pathT at moment of activation (for one-lap detection)
+    zoomLapDone: false,      // flips true once we've crossed the start point again
+    zoomPending: false,      // true if tapped mid-question; auto-fires on answer
+    zoomFireworkTimer: 0     // countdown to next firework during ZOOOM
   };
   const SPEEDS = { 1: 22, 2: 30, 3: 36, 4: 44 };
   const LEVEL_NAMES = { 1: 'Tiny', 2: 'Easy', 3: 'Medium', 4: 'Hard' };
+  // v13: per-difficulty ZOOOM thresholds (correct answers needed to fill bar).
+  const ZOOM_THRESHOLDS = { 1: 5, 2: 7, 3: 10, 4: 10 };
+  const ZOOM_SPEED_MULT = 2.2;
 
   try {
     game.bestScore = parseInt(localStorage.getItem('topsum_best') || '0', 10) || 0;
@@ -3276,12 +3614,287 @@
   })();
   scene.add(fighterFormation.root);
 
+  // === v13: ZOOOM WINGMATES ===
+  // Two escort jets that flank the player during the ZOOOM cinematic lap.
+  // Joins from behind, cruises alongside, peels off at the end. Each jet has
+  // a smooth additive-blend ribbon contrail (same triangle-strip technique
+  // as the player's plane trail).
+  const wingmates = (function() {
+    const root = new THREE.Group();
+    const TRAIL_LEN = 60;
+    function buildJet() {
+      const j = new THREE.Group();
+      const skin = new THREE.MeshPhongMaterial({ color: 0x6b7886, shininess: 70 });
+      const fuse = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, 14, 8), skin);
+      fuse.rotation.z = Math.PI / 2; j.add(fuse);
+      const nose = new THREE.Mesh(new THREE.ConeGeometry(0.9, 3, 8), skin);
+      nose.rotation.z = -Math.PI / 2; nose.position.x = 8.4; j.add(nose);
+      const canopy = new THREE.Mesh(
+        new THREE.SphereGeometry(0.95, 8, 6),
+        new THREE.MeshPhongMaterial({ color: 0x1a2d44, shininess: 120 })
+      );
+      canopy.scale.set(1.7, 0.5, 0.75); canopy.position.set(2.4, 0.7, 0); j.add(canopy);
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(7, 0.25, 9), skin);
+      wing.position.set(-2, 0, 0); j.add(wing);
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.4, 0.2), skin);
+      fin.position.set(-5.5, 1.4, 0); j.add(fin);
+      const stab = new THREE.Mesh(new THREE.BoxGeometry(2, 0.15, 5), skin);
+      stab.position.set(-5.5, 0.2, 0); j.add(stab);
+      const stripe = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.6, 1.0),
+        new THREE.MeshBasicMaterial({ color: 0xdc3545, side: THREE.DoubleSide })
+      );
+      stripe.rotation.y = Math.PI / 2;
+      stripe.position.set(-5.4, 1.4, 0.12); j.add(stripe);
+      return j;
+    }
+    function buildTrail() {
+      // Triangle-strip ribbon: 2 verts per segment offset ±right*w from the
+      // centerline, white additive-blend, alpha fades from head to tail.
+      // Same shader and indexing pattern as the player's plane trail.
+      const vertCount = TRAIL_LEN * 2;
+      const positionAttr = new Float32Array(vertCount * 3);
+      const colorAttr    = new Float32Array(vertCount * 3);
+      const alphaAttr    = new Float32Array(vertCount);
+      for (let i = 0; i < vertCount; i++) {
+        positionAttr[i*3]   = 0;
+        positionAttr[i*3+1] = -10000;   // park offscreen until populated
+        positionAttr[i*3+2] = 0;
+        alphaAttr[i] = 0;
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(positionAttr, 3));
+      geo.setAttribute('color',    new THREE.BufferAttribute(colorAttr,    3));
+      geo.setAttribute('aAlpha',   new THREE.BufferAttribute(alphaAttr,    1));
+      const indices = [];
+      for (let i = 0; i < TRAIL_LEN - 1; i++) {
+        const a = i*2, b = i*2+1, c = (i+1)*2, d = (i+1)*2+1;
+        indices.push(a, b, c, b, d, c);
+      }
+      geo.setIndex(indices);
+      const mat = new THREE.ShaderMaterial({
+        vertexShader: `
+          attribute float aAlpha;
+          varying vec3 vColor; varying float vAlpha;
+          void main(){
+            vColor = color; vAlpha = aAlpha;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }`,
+        fragmentShader: `
+          varying vec3 vColor; varying float vAlpha;
+          void main(){ gl_FragColor = vec4(vColor, vAlpha); }`,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        vertexColors: true,
+        blending: THREE.AdditiveBlending
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.frustumCulled = false;
+      return { mesh, geo, positionAttr, colorAttr, alphaAttr, samples: [] };
+    }
+    const left = buildJet();
+    const right = buildJet();
+    const leftTrail = buildTrail();
+    const rightTrail = buildTrail();
+    root.add(left); root.add(right);
+    root.add(leftTrail.mesh); root.add(rightTrail.mesh);
+    root.visible = false;
+    function resetTrails() {
+      [leftTrail, rightTrail].forEach(trail => {
+        trail.samples.length = 0;
+        for (let i = 0; i < TRAIL_LEN * 2; i++) {
+          trail.positionAttr[i*3]   = 0;
+          trail.positionAttr[i*3+1] = -10000;
+          trail.positionAttr[i*3+2] = 0;
+          trail.alphaAttr[i] = 0;
+        }
+        trail.geo.attributes.position.needsUpdate = true;
+        trail.geo.attributes.aAlpha.needsUpdate = true;
+      });
+    }
+    return { root, left, right, leftTrail, rightTrail, resetTrails, TRAIL_LEN };
+  })();
+  scene.add(wingmates.root);
+
+  const _wmCenter = new THREE.Vector3();
+  const _wmPos    = new THREE.Vector3();
+  const _wmMat    = new THREE.Matrix4();
+  const _lerp     = (a, b, t) => a + (b - a) * t;
+  let   _wmEmitTimer = 0;
+
+  // Capture the wingmate's current pos + horizontal-right vector as a sample
+  // for the ribbon trail. Called on a 25Hz cadence (every 0.04s).
+  function _sampleRibbon(trail, x, y, z, rx, rz) {
+    trail.samples.push({ x, y, z, rx, rz });
+    while (trail.samples.length > wingmates.TRAIL_LEN) trail.samples.shift();
+  }
+
+  // Rebuild the triangle-strip from the latest TRAIL_LEN samples. White colour,
+  // alpha fades from head (newest, brightest near jet) to tail. Width tapers
+  // — narrow near the jet, slightly wider further back.
+  function _rebuildRibbon(trail) {
+    const N = wingmates.TRAIL_LEN;
+    const len = trail.samples.length;
+    const widthBase = 0.9;
+    for (let i = 0; i < N; i++) {
+      const idx = len - 1 - (N - 1 - i);
+      const sample = idx >= 0 && idx < len ? trail.samples[idx] : null;
+      const fade = i / (N - 1);
+      let px = 0, py = -10000, pz = 0, rx = 0, rz = 0;
+      if (sample) {
+        px = sample.x; py = sample.y; pz = sample.z;
+        rx = sample.rx; rz = sample.rz;
+      }
+      const w = widthBase * (0.4 + fade * 0.6);
+      trail.positionAttr[i*6+0] = px + rx * w;
+      trail.positionAttr[i*6+1] = py;
+      trail.positionAttr[i*6+2] = pz + rz * w;
+      trail.positionAttr[i*6+3] = px - rx * w;
+      trail.positionAttr[i*6+4] = py;
+      trail.positionAttr[i*6+5] = pz - rz * w;
+      trail.colorAttr[i*6+0] = 1; trail.colorAttr[i*6+1] = 1; trail.colorAttr[i*6+2] = 1;
+      trail.colorAttr[i*6+3] = 1; trail.colorAttr[i*6+4] = 1; trail.colorAttr[i*6+5] = 1;
+      const alpha = fade * fade * 0.85;
+      trail.alphaAttr[i*2]   = alpha;
+      trail.alphaAttr[i*2+1] = alpha;
+    }
+    trail.geo.attributes.position.needsUpdate = true;
+    trail.geo.attributes.color.needsUpdate    = true;
+    trail.geo.attributes.aAlpha.needsUpdate   = true;
+  }
+
+  function tickWingmates(t, rawDt) {
+    if (!game.zoomActive) {
+      wingmates.root.visible = false;
+      return;
+    }
+    wingmates.root.visible = true;
+    const frame = getPathFrame(game.pathT);
+    _wmCenter.copy(frame.pos)
+      .addScaledVector(frame.right, game.offset.x)
+      .addScaledVector(frame.up,    game.offset.y);
+    // Local axes of jet model: +X = nose, +Y = top, +Z = right wing.
+    _wmMat.makeBasis(frame.tan, frame.up, frame.right);
+
+    // Phase windows tuned for a 0.75-of-lap ZOOOM:
+    //   join  : 0.00 → 0.10   (first ~13% of zoom — wingmates fade in from rear)
+    //   cruise: 0.10 → 0.60   (alongside the player)
+    //   peel  : 0.60 → 0.75   (last ~20% — climb up & out, trails arc behind)
+    const advanced = (game.pathT - game.zoomStartPathT + 1) % 1;
+    const joinP = Math.min(1, advanced / 0.10);
+    const peelP = Math.max(0, Math.min(1, (advanced - 0.60) / 0.15));
+
+    // Bank from player input — sign matches player's roll direction.
+    const bank = game.offsetVel.x * 0.04;
+    // Outward roll during peel-off (left rolls left, right rolls right).
+    const peelBank = peelP * 0.55;
+
+    // Sample on a 25Hz cadence — matches the player's contrail emit rate
+    // and gives ~2.4s of trail length at TRAIL_LEN = 60.
+    _wmEmitTimer += rawDt;
+    const shouldSample = _wmEmitTimer >= 0.04;
+    if (shouldSample) _wmEmitTimer = 0;
+
+    // Position a wingmate. side = -1 for left, +1 for right. lat/back/up are
+    // distances; sign for lateral is baked in via 'side'. During join, lerp
+    // from a low rear position (28m out, 35m back, 6m below) to the flank.
+    // During peel, lerp from flank to climbing-away (35m out, 8m forward, 25m up).
+    function place(jet, trail, side, peelSign) {
+      let lat = 10, back = -3, up = 0;
+      if (joinP < 1) {
+        lat  = _lerp(28,  10, joinP);
+        back = _lerp(-35, -3, joinP);
+        up   = _lerp(-6,   0, joinP);
+      }
+      if (peelP > 0) {
+        lat  = _lerp(10, 35, peelP);
+        back = _lerp(-3,  8, peelP);
+        up   = _lerp(0,  25, peelP);
+      }
+      _wmPos.copy(_wmCenter)
+        .addScaledVector(frame.right, side * lat)
+        .addScaledVector(frame.tan,   back)
+        .addScaledVector(frame.up,    up);
+      jet.position.copy(_wmPos);
+      jet.quaternion.setFromRotationMatrix(_wmMat);
+      jet.rotateX(bank + peelSign * peelBank);
+      if (shouldSample) {
+        _sampleRibbon(trail, _wmPos.x, _wmPos.y, _wmPos.z, frame.right.x, frame.right.z);
+      }
+      _rebuildRibbon(trail);
+    }
+    place(wingmates.left,  wingmates.leftTrail,  -1, -1);
+    place(wingmates.right, wingmates.rightTrail, +1, +1);
+  }
+
+  // === v13: ZOOOM ACTIVATION + EXIT ===
+  function activateZoom() {
+    if (game.zoomActive || game.zoomCharge < 1 || game.state !== 'playing') return;
+    // Mid-question? Queue the activation — it'll fire automatically after
+    // the player resolves the current question.
+    if (game.question && !game.answered) {
+      if (!game.zoomPending) {
+        game.zoomPending = true;
+        showToast('🚀 ZOOOM ARMED — answer to launch!');
+        Sound.click();
+      }
+      return;
+    }
+    game.zoomPending = false;
+    game.zoomActive = true;
+    game.zoomStartPathT = game.pathT;
+    game.zoomLapDone = false;
+    game.zoomFireworkTimer = 0;     // fire one immediately on activation
+    wingmates.resetTrails();        // start trails fresh
+    _wmEmitTimer = 0;               // first sample fires on the very next tick
+    triggerCameraShake(0.7, 0.45);  // G-force kick at activation
+    clearGates();
+    game.question = null;
+    game.answered = true;
+    updateFlow();   // applies 2.2× speed
+    // Audio: rising 3-note sting + low engine swell
+    Sound.beep(523.25, 0.10, 'sine',     0.22);          // C5
+    Sound.beep(659.25, 0.10, 'sine',     0.24, 0.09);    // E5
+    Sound.beep(987.77, 0.45, 'sine',     0.28, 0.18);    // B5 (held)
+    Sound.beep(130.81, 0.70, 'sawtooth', 0.12, 0.00);    // engine rumble C3
+    Sound.beep(98.00,  0.85, 'sawtooth', 0.10, 0.25);    // sub G2
+    showToast('🚀 ZOOOM!');
+    document.getElementById('zoom-streaks').classList.add('show');
+    // Big "ZOOOM" word flies across the screen — re-trigger animation by
+    // toggling the class across a frame.
+    const flash = document.getElementById('zoom-flash');
+    flash.classList.remove('fire');
+    requestAnimationFrame(() => requestAnimationFrame(() => flash.classList.add('fire')));
+    updateZoomBar();
+  }
+  function endZoom() {
+    game.zoomActive = false;
+    game.zoomCharge = 0;
+    updateFlow();
+    // Brief breath, then resume the math layer.
+    game.answered = true;
+    game.questionCooldown = 0.6;
+    document.getElementById('zoom-streaks').classList.remove('show');
+    updateZoomBar();
+  }
+  // Wire bar → activate. Bar's pointer-events are CSS-gated to the .full state,
+  // so clicks on a non-full bar are ignored automatically.
+  document.getElementById('zoom-bar').addEventListener('click', activateZoom);
+  document.getElementById('zoom-bar').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateZoom(); }
+  });
+
   // === v11: FIREWORKS (SUNSET ONLY) ===
   // Pool of 2-3 simultaneous fireworks, launched from 3 sites around the bay.
   // Auto-launches every 6-8s. Streak milestones (5/10/20) trigger a finale burst.
+  // v13: expanded palette — original 5 (red/white/gold/blue/pink) plus
+  // green / cyan / orange / purple / lime for more visual variety.
   const FW_PALETTE = [
-    [1.0, 0.2, 0.25], [1.0, 1.0, 1.0], [1.0, 0.85, 0.25],
-    [0.3, 0.65, 1.0], [1.0, 0.3, 0.7]
+    [1.0, 0.20, 0.25], [1.0, 1.00, 1.00], [1.0, 0.85, 0.25],
+    [0.3, 0.65, 1.00], [1.0, 0.30, 0.70],
+    [0.3, 1.00, 0.45], [0.3, 1.00, 1.00], [1.0, 0.55, 0.15],
+    [0.7, 0.30, 1.00], [0.7, 1.00, 0.30]
   ];
   const FW_SITES = [
     { x: 0,   z: 0    },
@@ -3352,7 +3965,8 @@
     fwLaunchTimer -= dt;
     if (fwLaunchTimer <= 0) {
       launchFirework();
-      fwLaunchTimer = 6 + Math.random() * 2;
+      // v13: tightened from 6-8s to 4-5.5s for slightly denser sky
+      fwLaunchTimer = 4 + Math.random() * 1.5;
     }
     for (const f of fireworks) {
       if (f.state === 'idle') continue;
@@ -3494,7 +4108,12 @@
     else if (s >= 5) game.flowMult = 3;
     else if (s >= 3) game.flowMult = 2;
     else game.flowMult = 1;
-    game.speed = SPEEDS[game.level] * (1 + (game.flowMult - 1) * 0.08);
+    let speed = SPEEDS[game.level] * (1 + (game.flowMult - 1) * 0.08);
+    // v13: Speed Mode adds 50% on top of the base × flow scaling.
+    if (Settings.speedMode) speed *= 1.5;
+    // v13: ZOOOM bumps speed 2.2× during the cinematic lap (stacks on top).
+    if (game.zoomActive) speed *= ZOOM_SPEED_MULT;
+    game.speed = speed;
   }
 
   // === KEYBOARD ===
@@ -3504,6 +4123,12 @@
     if (e.code === 'KeyM') toggleSound();
     if (e.code === 'KeyC') toggleCenter();
     if (e.code === 'KeyT') toggleTime();
+    if (e.code === 'KeyS') { e.preventDefault(); toggleSpeedMode(); }
+    if (e.code === 'KeyZ') {
+      // v13: ZOOOM. Click handler covers mobile; this gives desktop a shortcut.
+      e.preventDefault();
+      activateZoom();
+    }
     if (e.code === 'Escape') {
       // If the pause overlay is open, ESC closes it (doesn't dump to menu).
       if (game.paused) { Sound.click(); closePauseOverlay(); }
@@ -3627,15 +4252,31 @@
     Settings.applyControl();
     showToast('CONTROL: ' + (Settings.control === 'joystick' ? 'JOYSTICK' : 'D-PAD'));
   }
+  // v13: Speed Mode toggle — keeps title checkbox, in-game icon, and desktop
+  // hint badge in sync. Live-refreshes speed via updateFlow.
+  function toggleSpeedMode() {
+    Settings.speedMode = !Settings.speedMode;
+    const cb = document.getElementById('cb-speedmode');
+    if (cb) cb.checked = Settings.speedMode;
+    Settings.save();
+    Settings.updateBadges();
+    if (typeof updateFlow === 'function') updateFlow();
+    showToast(Settings.speedMode ? '⚡ SPEED MODE ON' : '⚡ SPEED MODE OFF');
+    if (Settings.sound) Sound.click();
+  }
   function backToMenu() {
     game.state = 'idle';
     game.paused = false;
+    game.zoomActive = false;  // v13: cancel any in-flight ZOOOM
+    game.zoomCharge = 0;
+    game.zoomPending = false;
     document.getElementById('pause-overlay').classList.remove('show');
     document.getElementById('title').style.display = 'flex';
     document.getElementById('gameover').classList.remove('show');
     Object.keys(keys).forEach(k => keys[k] = false);
     document.querySelectorAll('.dbtn.active').forEach(b => b.classList.remove('active'));
     joyReset();
+    updateZoomBar();
     updateTitleBest();
     renderUnlockHint();
     maybeShowMobileTip();
@@ -3668,6 +4309,7 @@
   document.getElementById('btn-sound').addEventListener('click', toggleSound);
   document.getElementById('btn-center').addEventListener('click', toggleCenter);
   document.getElementById('btn-time').addEventListener('click', toggleTime);
+  document.getElementById('btn-speed').addEventListener('click', toggleSpeedMode);
   document.getElementById('btn-controls').addEventListener('click', toggleControlStyle);
   document.getElementById('btn-pause').addEventListener('click', openPauseOverlay);
   document.getElementById('pause-resume').addEventListener('click', () => { Sound.click(); closePauseOverlay(); });
@@ -3870,6 +4512,12 @@
       flashGate(picked, 0x44ff99);
       flashCorrect();
       Sound.correct();
+      // v13: charge ZOOOM bar (skip during the cinematic itself).
+      if (!game.zoomActive) {
+        const threshold = ZOOM_THRESHOLDS[game.level] || 10;
+        game.zoomCharge = Math.min(1, game.zoomCharge + 1 / threshold);
+        updateZoomBar();
+      }
       // Onboarding completion: first correct answer ever flips the flag.
       if (!onboarded) {
         onboarded = true;
@@ -3914,6 +4562,11 @@
     }
     updateHUD();
     game.questionCooldown = correct ? 0.9 : 1.6;
+    // v13: if the player armed ZOOOM mid-question, fire it now (after the
+    // current answer settled). Brief delay so the answer feedback still reads.
+    if (game.zoomPending && game.zoomCharge >= 1 && game.lives > 0) {
+      setTimeout(() => { if (game.state === 'playing') activateZoom(); }, 350);
+    }
   }
 
   function levelUp(newLvl) {
@@ -3982,6 +4635,17 @@
        game.flowMult >= 2 ? ' tier2' : '');
   }
 
+  // v13: paint the ZOOOM bar to match current game state.
+  function updateZoomBar() {
+    const bar = document.getElementById('zoom-bar');
+    if (!bar) return;
+    const inPlay = game.state === 'playing';
+    bar.classList.toggle('show', inPlay);
+    bar.classList.toggle('zooming', game.zoomActive);
+    bar.style.setProperty('--charge', game.zoomCharge.toFixed(3));
+    bar.classList.toggle('full', game.zoomCharge >= 1 && !game.zoomActive);
+  }
+
   function startGame(level) {
     Sound.init(); Sound.resume(); Sound.click();
     game.level = level;
@@ -3997,6 +4661,11 @@
     game.offsetVel.x = 0; game.offsetVel.y = 0;
     // Tiny mode arrow: shows for first 2 questions of every Tiny flight (not persistent).
     game.tinyArrowQuestionsRemaining = (level === 1) ? 2 : 0;
+    // v13: reset ZOOOM state at flight start
+    game.zoomCharge = 0;
+    game.zoomActive = false;
+    game.zoomLapDone = false;
+    game.zoomPending = false;
     setPlaneTier(1);
     game.state = 'playing';
     document.getElementById('title').style.display = 'none';
@@ -4006,6 +4675,7 @@
     document.getElementById('mobile-tip').classList.remove('show');
     resetTrail();
     updateHUD();
+    updateZoomBar();
     // First-time onboarding: delay first question by 2s, show overlay
     if (!onboarded) {
       const ob = document.getElementById('onboard-overlay');
@@ -4023,6 +4693,10 @@
     maybeUpdateBest();
     const wasNewBest = (game.score > 0 && game.score === game.bestScore);
     game.state = 'gameover';
+    game.zoomActive = false;  // v13: clean up any active ZOOOM
+    game.zoomCharge = 0;
+    game.zoomPending = false;
+    updateZoomBar();
     clearGates();
     game.question = null;
     totalFlights++;
@@ -4300,7 +4974,15 @@
     const lookTarget = shipPos.clone().add(frame.tan.clone().multiplyScalar(20));
     camera.lookAt(lookTarget);
 
-    if (game.question && !game.answered) {
+    // v13: ZOOOM camera FOV pop — widens the lens for warp feel, eases back after.
+    const targetFov = game.zoomActive ? 92 : 72;
+    if (Math.abs(camera.fov - targetFov) > 0.05) {
+      camera.fov += (targetFov - camera.fov) * Math.min(1, rawDt * 5);
+      camera.updateProjectionMatrix();
+    }
+
+    // v13: gates and questions are suspended during ZOOOM (free flight, no maths).
+    if (game.question && !game.answered && !game.zoomActive) {
       const gateT = game.question.gateT;
       let crossed = false;
       if (game.pathT >= prevT) crossed = gateT > prevT && gateT <= game.pathT;
@@ -4317,9 +4999,29 @@
       }
     }
 
-    if (game.state === 'playing' && game.answered) {
+    if (game.state === 'playing' && game.answered && !game.zoomActive) {
       game.questionCooldown -= rawDt;
       if (game.questionCooldown <= 0) newQuestion();
+    }
+
+    // v13: ZOOOM tick — runs for 3/4 of the path circuit, then ends.
+    if (game.zoomActive) {
+      const advanced = (game.pathT - game.zoomStartPathT + 1) % 1;
+      // Mark lap-done after a tiny grace period so a frame-jitter hop across
+      // 1.0 → 0.0 doesn't accidentally satisfy advanced >= 0.75.
+      if (advanced > 0.05) game.zoomLapDone = true;
+      if (game.zoomLapDone && advanced >= 0.75 && advanced < 0.95) {
+        endZoom();
+      } else {
+        // Spam fireworks across the bay during the lap (force-fire — bypasses
+        // the sunset-only gate of the auto-launcher).
+        game.zoomFireworkTimer -= rawDt;
+        if (game.zoomFireworkTimer <= 0) {
+          launchFirework(undefined, 1.4);
+          game.zoomFireworkTimer = 0.28 + Math.random() * 0.22;
+        }
+      }
+      tickWingmates(t, rawDt);
     }
 
     if (game.question && game.question.gates) {
