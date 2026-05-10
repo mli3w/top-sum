@@ -1,8 +1,44 @@
 <!DOCTYPE html>
 <!--
   ============================================================
-  TOP SUM · Math Flight (v13)
+  TOP SUM · Math Flight (v13.1)
   ------------------------------------------------------------
+  v13.1 changes:
+    SPEED MODE — 3-STATE TIER:
+    · Speed Mode upgraded from a 2-state toggle to a 3-state cycle:
+      Off / ⚡ Fast (1.5×) / ⚡⚡ Faster (1.85×). Caps at 1.85×
+      so 3-digit hard math stays readable when stacked with
+      Flow ×4 and ZOOOM.
+    · Title-screen checkbox replaced with a radio picker that
+      mirrors the time-of-day picker pattern.
+    · In-game ⚡ icon now cycles through the three tiers — emoji
+      switches to ⚡⚡ at Faster, with a hotter glow and a tighter
+      0.95s pulse cadence (vs 1.6s for Fast).
+    · S key cycles Off → Fast → Faster → Off.
+    · Backward compat: old "topsum_speedmode='1'" saves map to
+      Fast tier; '0' stays Off.
+
+    WINGMATE CONTRAIL — RIBBON MESH:
+    · Replaced the Points-based wingmate trails (which rendered
+      as discrete floating sprites due to size attenuation) with
+      a triangle-strip ribbon mesh that mirrors the player plane's
+      trail technique exactly. Custom ShaderMaterial, per-vertex
+      alpha + colour, additive blending, 25Hz sample rate.
+    · TRAIL_LEN reduced 80 → 60 to match the player.
+    · Trail length now ~2.4s of flight at ZOOOM speeds.
+
+    UX TWEAKS:
+    · Desktop in-game hint panel now surfaces "Z: ZOOOM" so
+      the keyboard shortcut is discoverable during play.
+    · Mobile icon column gap tightened 10px → 8px to fit
+      the now-six icons cleanly on smaller phones.
+
+    FIXES:
+    · In-game icon column on desktop: a stray CSS rule shipped
+      with v13 was hiding all icons except Speed Mode. Removed —
+      all six icons (Sound / Center / Time / Speed / Controls /
+      Pause) now render on both desktop and touch.
+
   v13 changes:
     ZOOOM (NEW HEADLINE FEATURE):
     · A pill-shaped ZOOOM bar appears top-center during play.
@@ -496,9 +532,18 @@
                 0 4px 12px rgba(0, 0, 0, 0.4);
     animation: speedIconPulse 1.6s ease-in-out infinite;
   }
+  /* v13.1: Faster tier — hotter glow + tighter pulse cadence. */
+  #btn-speed.on-faster {
+    border-color: rgba(255, 200, 80, 1);
+    background: rgba(255, 180, 60, 0.28);
+    box-shadow: 0 0 22px rgba(255, 200, 80, 0.85),
+                0 0 40px rgba(255, 150, 40, 0.4),
+                0 4px 12px rgba(0, 0, 0, 0.4);
+    animation: speedIconPulse 0.95s ease-in-out infinite;
+  }
   @keyframes speedIconPulse {
     0%, 100% { transform: scale(1);    filter: brightness(1); }
-    50%      { transform: scale(1.05); filter: brightness(1.18); }
+    50%      { transform: scale(1.05); filter: brightness(1.22); }
   }
   /* v13: Speed icon needs no extra rules — the existing
      "body:not(.is-touch) #icon-settings { display: flex; }" further down
@@ -978,6 +1023,23 @@
     font-size: clamp(10px, 2.2vw, 12px);
     letter-spacing: 2px;
     color: #ffe9aa;
+  }
+
+  /* v13.1: Speed Mode 3-state picker — same shape as time-picker, gold tint
+     to match the ⚡ icon family. */
+  #speed-picker {
+    display: flex;
+    align-items: center; gap: 10px;
+    padding: 8px 14px;
+    border: 1px dashed rgba(255, 220, 100, 0.4);
+    border-radius: 8px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  #speed-picker .picker-label {
+    opacity: 0.78;
+    font-size: clamp(10px, 2.2vw, 12px);
+    letter-spacing: 2px;
+    color: #fff0c4;
   }
 
   #control-picker {
@@ -1642,7 +1704,12 @@
       </div>
       <label><input type="checkbox" id="cb-autocenter"> Auto-center</label>
       <label><input type="checkbox" id="cb-sound"> Sound</label>
-      <label class="speed-opt"><input type="checkbox" id="cb-speedmode"> ⚡ Speed Mode <small>(50% faster)</small></label>
+      <div id="speed-picker">
+        <span class="picker-label">Speed:</span>
+        <label><input type="radio" name="speedmode" value="0"> Normal</label>
+        <label><input type="radio" name="speedmode" value="1"> ⚡ Fast</label>
+        <label><input type="radio" name="speedmode" value="2"> ⚡⚡ Faster</label>
+      </div>
       <div id="control-picker">
         <span class="picker-label">Controls:</span>
         <label><input type="radio" name="control" value="joystick"> 🕹 Joystick</label>
@@ -1740,12 +1807,19 @@
   const joy = { x: 0, y: 0 };
 
   // === SETTINGS ===
+  // v13.1: Speed Mode is now a 3-state tier — 0 = Off, 1 = Fast (1.5×),
+  // 2 = Faster (1.85×). Caps at 1.85 to stay under the read-time cliff for
+  // hard math at full Flow ×4 + ZOOOM stacking.
+  const SPEED_MODE_MULTS  = [1.0, 1.5, 1.85];
+  const SPEED_MODE_LABELS = ['OFF', 'FAST', 'FASTER'];
+  const SPEED_MODE_ICONS  = ['⚡', '⚡', '⚡⚡'];
+
   const Settings = {
     autoCenter: true,
     sound: true,
     control: isTouch ? 'dpad' : 'joystick',
     timeOfDay: 'day',
-    speedMode: false,   // v13: 50% faster base speed for fast players
+    speedMode: 0,   // v13.1: 0 = Off, 1 = Fast (1.5×), 2 = Faster (1.85×)
     load() {
       let savedControl = null;
       try {
@@ -1759,7 +1833,12 @@
         if (sn !== null) this.sound = sn === '1';
         if (ct === 'joystick' || ct === 'dpad') { this.control = ct; savedControl = ct; }
         if (td === 'day' || td === 'sunset') this.timeOfDay = td;
-        if (sp !== null) this.speedMode = sp === '1';
+        // v13.1: speedMode is now 0/1/2. Old saves stored '0' or '1' as the
+        // boolean toggle — those map cleanly onto Off / Fast tiers.
+        if (sp !== null) {
+          const n = parseInt(sp, 10);
+          this.speedMode = (n === 1 || n === 2) ? n : 0;
+        }
         // One-time migration: any older default of 'joystick' on a touch
         // device gets switched over to 'dpad' the first time we boot up
         // with this build. After this runs once, the user's explicit choice
@@ -1775,10 +1854,9 @@
       if (!savedControl && isTouch) this.control = 'dpad';
       document.getElementById('cb-autocenter').checked = this.autoCenter;
       document.getElementById('cb-sound').checked = this.sound;
-      const cbSpeed = document.getElementById('cb-speedmode');
-      if (cbSpeed) cbSpeed.checked = this.speedMode;
       document.querySelectorAll('input[name=control]').forEach(r => r.checked = (r.value === this.control));
       document.querySelectorAll('input[name=timeofday]').forEach(r => r.checked = (r.value === this.timeOfDay));
+      document.querySelectorAll('input[name=speedmode]').forEach(r => r.checked = (parseInt(r.value, 10) === this.speedMode));
       this.updateBadges();
       this.applyControl();
       applyTimeOfDay();
@@ -1789,7 +1867,7 @@
         localStorage.setItem('topsum_sound', this.sound ? '1' : '0');
         localStorage.setItem('topsum_control', this.control);
         localStorage.setItem('topsum_time', this.timeOfDay);
-        localStorage.setItem('topsum_speedmode', this.speedMode ? '1' : '0');
+        localStorage.setItem('topsum_speedmode', String(this.speedMode | 0));
       } catch (e) {}
     },
     applyControl() {
@@ -1817,8 +1895,8 @@
       ti.textContent = this.timeOfDay === 'sunset' ? 'SUNSET' : 'DAY';
       ti.className = 'state';
       if (sp) {
-        sp.textContent = this.speedMode ? 'ON' : 'OFF';
-        sp.className = 'state' + (this.speedMode ? '' : ' off');
+        sp.textContent = SPEED_MODE_LABELS[this.speedMode] || 'OFF';
+        sp.className = 'state' + (this.speedMode === 0 ? ' off' : '');
       }
       const bs = document.getElementById('btn-sound');
       const bc = document.getElementById('btn-center');
@@ -1828,7 +1906,11 @@
       bs.classList.toggle('off', !this.sound);
       bc.classList.toggle('off', !this.autoCenter);
       bt.textContent = this.timeOfDay === 'sunset' ? '🌅' : '☀';
-      if (bsp) bsp.classList.toggle('on', this.speedMode);
+      if (bsp) {
+        bsp.textContent = SPEED_MODE_ICONS[this.speedMode] || '⚡';
+        bsp.classList.toggle('on', this.speedMode > 0);
+        bsp.classList.toggle('on-faster', this.speedMode === 2);
+      }
     }
   };
 
@@ -1900,12 +1982,18 @@
   document.getElementById('cb-sound').addEventListener('change', e => {
     Settings.sound = e.target.checked; Settings.save(); Settings.updateBadges();
   });
-  document.getElementById('cb-speedmode').addEventListener('change', e => {
-    Settings.speedMode = e.target.checked;
-    Settings.save();
-    Settings.updateBadges();   // paints the in-game icon + hint badge
-    if (typeof updateFlow === 'function') updateFlow();
-    showToast(Settings.speedMode ? '⚡ SPEED MODE ON' : '⚡ SPEED MODE OFF');
+  // v13.1: speedmode is now a 3-state radio group (Off / Fast / Faster).
+  document.querySelectorAll('input[name=speedmode]').forEach(r => {
+    r.addEventListener('change', e => {
+      if (!e.target.checked) return;
+      const tier = parseInt(e.target.value, 10) || 0;
+      Settings.speedMode = (tier >= 0 && tier < SPEED_MODE_MULTS.length) ? tier : 0;
+      Settings.save();
+      Settings.updateBadges();
+      if (typeof updateFlow === 'function') updateFlow();
+      const labels = ['⚡ SPEED OFF', '⚡ FAST (+50%)', '⚡⚡ FASTER (+85%)'];
+      showToast(labels[Settings.speedMode]);
+    });
   });
   document.querySelectorAll('input[name=control]').forEach(r => {
     r.addEventListener('change', e => {
@@ -4109,8 +4197,8 @@
     else if (s >= 3) game.flowMult = 2;
     else game.flowMult = 1;
     let speed = SPEEDS[game.level] * (1 + (game.flowMult - 1) * 0.08);
-    // v13: Speed Mode adds 50% on top of the base × flow scaling.
-    if (Settings.speedMode) speed *= 1.5;
+    // v13.1: Speed Mode is a tier (Off / Fast 1.5× / Faster 1.85×).
+    speed *= SPEED_MODE_MULTS[Settings.speedMode] || 1;
     // v13: ZOOOM bumps speed 2.2× during the cinematic lap (stacks on top).
     if (game.zoomActive) speed *= ZOOM_SPEED_MULT;
     game.speed = speed;
@@ -4252,16 +4340,18 @@
     Settings.applyControl();
     showToast('CONTROL: ' + (Settings.control === 'joystick' ? 'JOYSTICK' : 'D-PAD'));
   }
-  // v13: Speed Mode toggle — keeps title checkbox, in-game icon, and desktop
-  // hint badge in sync. Live-refreshes speed via updateFlow.
+  // v13.1: Speed Mode cycles Off → Fast → Faster → Off. Keeps title-screen
+  // radios, in-game icon, and desktop hint badge in sync. Live-refreshes speed.
   function toggleSpeedMode() {
-    Settings.speedMode = !Settings.speedMode;
-    const cb = document.getElementById('cb-speedmode');
-    if (cb) cb.checked = Settings.speedMode;
+    Settings.speedMode = (Settings.speedMode + 1) % SPEED_MODE_MULTS.length;
+    document.querySelectorAll('input[name=speedmode]').forEach(r => {
+      r.checked = (parseInt(r.value, 10) === Settings.speedMode);
+    });
     Settings.save();
     Settings.updateBadges();
     if (typeof updateFlow === 'function') updateFlow();
-    showToast(Settings.speedMode ? '⚡ SPEED MODE ON' : '⚡ SPEED MODE OFF');
+    const labels = ['⚡ SPEED OFF', '⚡ FAST (+50%)', '⚡⚡ FASTER (+85%)'];
+    showToast(labels[Settings.speedMode]);
     if (Settings.sound) Sound.click();
   }
   function backToMenu() {

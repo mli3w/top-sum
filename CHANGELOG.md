@@ -5,6 +5,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the 
 
 ---
 
+## [v13.1] — 2026-05-10
+
+Polish patch on top of v13. Speed Mode gains a Faster tier, wingmate contrails finally look like contrails, and the v13 regression that hid most in-game icons is fixed.
+
+### Added
+- **Desktop in-game hint** now surfaces `Z: ZOOOM` so the shortcut is discoverable during play.
+
+### Changed
+- **Speed Mode** upgraded from a 2-state toggle to a 3-state cycle:
+  - Off (1.0×)
+  - ⚡ Fast (1.5× — same as the previous Speed Mode)
+  - ⚡⚡ Faster (1.85× — new)
+  - Caps at 1.85× so 3-digit hard math stays readable when stacked with Flow ×4 and ZOOOM.
+  - Title-screen checkbox replaced with a radio picker mirroring the time-of-day pattern.
+  - In-game ⚡ icon cycles through tiers — emoji switches to ⚡⚡ at Faster with a brighter glow and a tighter 0.95s pulse.
+  - `S` key cycles Off → Fast → Faster → Off.
+  - Backward compat: old `topsum_speedmode='1'` saves map to Fast.
+- **Wingmate ZOOOM contrails** replaced with a triangle-strip ribbon mesh — same custom shader and 25 Hz sample rate as the player's plane trail. Was a Points cloud that read as floating squares.
+- **Mobile icon column** gap tightened 10 px → 8 px to fit six icons cleanly on smaller phones.
+
+### Fixed
+- **In-game icon column on desktop:** a stray CSS rule shipped with v13 hid every icon except Speed Mode. Removed — all six icons render again on both desktop and touch.
+
+---
+
 ## [v13] — 2026-05-10
 
 The biggest update since launch. New ZOOOM cinematic boost, Speed Mode for fast players, redesigned title logo, sunset bumps, and an RSAF flypast over Marina Bay.

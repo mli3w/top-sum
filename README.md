@@ -101,7 +101,15 @@ Each correct answer fills a glowing **ZOOOM bar** at the top of the screen. When
 Charge thresholds vary by difficulty — Tiny: 5, Easy: 7, Medium / Hard: 10. Tap the bar mid-question and it'll auto-fire after you answer — no rug-pull.
 
 ### ⚡ Speed Mode
-For fast players who find the base pace too gentle. Toggle on the title screen, the in-game ⚡ icon, or press `S` for a **50% faster base speed** on every difficulty. Stacks with the Flow multiplier and ZOOOM.
+For fast players who find the base pace too gentle. Three tiers, picked from the title screen, cycled by the in-game ⚡ icon, or stepped via the `S` key:
+
+| Tier | Multiplier | Icon |
+|---|---|---|
+| Normal | 1.0× | (off) |
+| ⚡ Fast | 1.5× | ⚡ |
+| ⚡⚡ Faster | 1.85× | ⚡⚡ |
+
+Caps at 1.85× so questions stay readable when stacked with Flow ×4 and ZOOOM. Picked tier persists across sessions.
 
 ### 🌆 Cinematic Marina Bay World
 - Stylised Singapore skyline (Merlion, bay, boats, water)
@@ -146,7 +154,7 @@ For fast players who find the base pace too gentle. Toggle on the title screen, 
 | `M` | Toggle sound |
 | `C` | Toggle auto-center |
 | `T` | Toggle Day / Sunset |
-| `S` | Toggle Speed Mode |
+| `S` | Cycle Speed Mode (Off → Fast → Faster) |
 | `Z` | Fire ZOOOM (when charged) |
 | `Esc` | Pause / resume |
 
