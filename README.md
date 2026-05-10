@@ -30,6 +30,7 @@ Chain correct answers together to:
 - build streaks
 - increase speed
 - unlock faster and more advanced planes
+- charge a ZOOOM cinematic lap with F-16 escorts
 - trigger cinematic slow-motion moments
 - unlock new flight experiences
 
@@ -88,6 +89,20 @@ Five plane tiers swap in automatically as your streak builds:
 
 Lose your streak and you drop back. Stay in flow to keep flying the best plane.
 
+### 🚀 ZOOOM Boost
+Each correct answer fills a glowing **ZOOOM bar** at the top of the screen. When it's full, tap the bar (or press `Z`) to fire:
+
+- A 3/4-circuit cinematic lap — no math questions, just sky
+- Two F-16 escort jets fade in from behind, lock onto your wings, and peel off climbing into the distance
+- Base speed bumped 2.2×, camera FOV widens, screen edges streak with warp-tunnel rays
+- Fireworks blooming over the bay throughout the lap
+- A triumphant 3-note rising sting at activation
+
+Charge thresholds vary by difficulty — Tiny: 5, Easy: 7, Medium / Hard: 10. Tap the bar mid-question and it'll auto-fire after you answer — no rug-pull.
+
+### ⚡ Speed Mode
+For fast players who find the base pace too gentle. Toggle on the title screen, the in-game ⚡ icon, or press `S` for a **50% faster base speed** on every difficulty. Stacks with the Flow multiplier and ZOOOM.
+
 ### 🌆 Cinematic Marina Bay World
 - Stylised Singapore skyline (Merlion, bay, boats, water)
 - Day and Sunset modes
@@ -131,10 +146,14 @@ Lose your streak and you drop back. Stay in flow to keep flying the best plane.
 | `M` | Toggle sound |
 | `C` | Toggle auto-center |
 | `T` | Toggle Day / Sunset |
+| `S` | Toggle Speed Mode |
+| `Z` | Fire ZOOOM (when charged) |
 | `Esc` | Pause / resume |
 
 ### Mobile
 - **Joystick** (default) or **D-pad** — switch from the title screen, or via the icon column in-game
+- Tap the **ZOOOM bar** at the top to fire when it's full
+- Tap the **⚡ icon** to toggle Speed Mode
 - Tap ⏸ to pause
 
 ---
